@@ -67,7 +67,7 @@ class BaseParser(Parser):
         # Check that folder content is as expected
         files_retrieved = self.retrieved.list_object_names()
 
-        files_expected = {output_filename, log_output}
+        files_expected = {output_filename}
         if not files_expected.issubset(files_retrieved):
             self.logger.error(
                 f"Found files '{files_retrieved}', expected to find '{files_expected}'"
@@ -77,10 +77,10 @@ class BaseParser(Parser):
         # Add output file to the outputs
 
         with (
-            self.retrieved.open(log_output, "rb") as log,
+            #self.retrieved.open(log_output, "rb") as log,
             self.retrieved.open(output_filename, "rb") as output,
         ):
-            self.out("log_output", SinglefileData(file=log, filename=log_output))
+            #self.out("log_output", SinglefileData(file=log, filename=log_output))
             self.out(
                 "std_output", SinglefileData(file=output, filename=output_filename)
             )

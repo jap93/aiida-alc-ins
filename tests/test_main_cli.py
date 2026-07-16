@@ -42,5 +42,5 @@ def test_collect_aiida_cli_options_includes_euphonic_flags():
 
 
 def test_modes_wrapper_exposes_expected_defaults():
-    assert Modes.PHONON_OUTPUT == "aiida-modes.yml"
+    assert Modes.PHONON_OUTPUT == "aiida-modes.json"
     assert Modes.DEFAULT_SUMMARY_FILE == "phonon-summary.yml"

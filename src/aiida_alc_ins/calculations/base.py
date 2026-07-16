@@ -202,7 +202,7 @@ class BaseINS(CalcJob):  # numpydoc ignore=PR01
         calcinfo.retrieve_list = [
             self.metadata.options.output_filename,
             self.uuid,
-            log_filename,
+            #log_filename,
             summary,
         ]
         

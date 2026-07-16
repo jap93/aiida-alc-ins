@@ -30,9 +30,7 @@ def phonon_modes(params: dict[str, Any]) -> None:
         "length_unit": Str(params["length_unit"]),
     }
 
-    if params.get("save_to"):
-        inputs["save_to"] = Str(params["save_to"])
-
+    
     if params.get("grid"):
         inputs["grid"] = Str(params["grid"])
 
@@ -44,25 +42,27 @@ def phonon_modes(params: dict[str, Any]) -> None:
     print("Results dictionary:")
     print(result.keys())
 
+    print(result["results_dict"].get_dict())
+    #write phonon modes to a json file
+    with open("phonon_modes.json", "w") as f:
+        f.write(result["phonon_output"].get_content())
+        
+    print(f"remote folder {result['remote_folder']} {node.get_remote_workdir()} ")
+    print(f"retrieved {result['retrieved']}  ")
+
 
 @click.command("cli")
 @click.argument("codelabel", type=str)
 @click.argument("input_source", type=str)
 @click.option(
     "--out",
-    default="aiida-modes.yml",
+    default="aiida-modes.json",
     type=str,
     help="Name of the generated Euphonic phonon modes output file.",
 )
 @click.option(
-    "--save-to",
-    default="matplot_fig.png",
-    type=str,
-    help="Destination for any generated plot image.",
-)
-@click.option(
     "--grid",
-    default="",
+    default="5 5 5",
     type=str,
     help="Monkhorst-Pack grid for modes calculation, e.g. '5 5 5'.",
 )
@@ -82,7 +82,6 @@ def cli(
     codelabel: str,
     input_source: str,
     out: str,
-    save_to: str,
     grid: str,
     grid_spacing: float,
     length_unit: str,
@@ -98,7 +97,6 @@ def cli(
         "code": code,
         "input_source": input_source,
         "out": out,
-        "save_to": save_to,
         "grid": grid,
         "grid_spacing": grid_spacing,
         "length_unit": length_unit,

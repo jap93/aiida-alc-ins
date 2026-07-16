@@ -19,7 +19,7 @@ class Modes(BaseINS):
     gradients as retrievable AiiDA outputs.
     """
 
-    PHONON_OUTPUT = "aiida-modes.yml"
+    PHONON_OUTPUT = "aiida-modes.json"
     DEFAULT_SUMMARY_FILE = "phonon-summary.yml"
     DEFAULT_MODE_GRADS_FILE = "aiida-mode_grads.json"
 
@@ -41,14 +41,7 @@ class Modes(BaseINS):
             required=False,
             default=lambda: Str(cls.PHONON_OUTPUT),
             help="Name of the generated phonon modes output file.",
-        )
-        spec.input(
-            "save_to",
-            valid_type=Str,
-            required=False,
-            default=lambda: Str("matplot_fig.png"),
-            help="Destination for any generated plot image.",
-        )
+        )        
         spec.input(
             "grid",
             valid_type=Str,
@@ -69,6 +62,9 @@ class Modes(BaseINS):
             default=lambda: Str("angstrom"),
             help="Length unit used by the underlying calculation.",
         )
+
+        spec.inputs["metadata"]["options"]["parser_name"].default = "euphonic.modes_parser"
+
 
         spec.output(
             "results_dict",
@@ -100,9 +96,6 @@ class Modes(BaseINS):
 
         if self.inputs.length_unit.value != "angstrom":
             cmdline_params.extend(["--length-unit", self.inputs.length_unit.value])
-
-        if self.inputs.save_to.value != "matplot_fig.png":
-            cmdline_params.extend(["--save-to", self.inputs.save_to.value])
 
         cmdline_params.extend(["--out", output_filename])
         codeinfo.cmdline_params = cmdline_params

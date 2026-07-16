@@ -18,21 +18,9 @@ from euphonic import ForceConstants, util
 @click.argument("filename", type=click.Path(exists=True, dir_okay=False))
 @click.option(
     "--out",
-    default="aiida-modes.yml",
+    default="aiida-modes.json",
     show_default=True,
     help="Name of the output file produced by the AiiDA wrapper.",
-)
-@click.option(
-    "--save-to",
-    default="matplot_fig.png",
-    show_default=True,
-    help="Destination for any generated plot image.",
-)
-@click.option(
-    "--weighting",
-    type=str,
-    default=None,
-    help="Type of weighted phonon output to calculate.",
 )
 @click.option(
     "--grid",
@@ -55,39 +43,22 @@ from euphonic import ForceConstants, util
     show_default=True,
     help="Length unit for the calculation.",
 )
-@click.option(
-    "--pdos/--no-pdos",
-    default=False,
-    help="Calculate the partial density of states.",
-)
-@click.option(
-    "--adaptive/--no-adaptive",
-    default=False,
-    help="Enable adaptive sampling for the calculation.",
-)
+
 def cli(
     filename: str,
     out: str,
-    save_to: str,
-    weighting: str | None,
     grid: tuple[int, int, int] | None,
     grid_spacing: float,
-    length_unit: str,
-    pdos: bool,
-    adaptive: bool,
+    length_unit: str
 ) -> None:
     """Run an Euphonic calculation."""
     config = collect_aiida_cli_options(
         {
             "filename": filename,
             "out": out,
-            "save_to": save_to,
-            "weighting": weighting,
             "grid": grid,
             "grid_spacing": grid_spacing,
             "length_unit": length_unit,
-            "pdos": pdos,
-            "adaptive": adaptive,
         }
     )
     run_euphonic_phonon_calculation(config)
@@ -113,41 +84,26 @@ def collect_aiida_cli_options(
 
     filename = values.get("filename")
     out = values.get("out", "aiida-modes.json")
-    weighting = values.get("weighting")
-    save_to = values.get("save_to", "matplot_fig.png")
     grid = values.get("grid")
     grid_spacing = values.get("grid_spacing", 0.1)
     length_unit = values.get("length_unit", "angstrom")
-    pdos = bool(values.get("pdos", False))
-    adaptive = bool(values.get("adaptive", False))
 
     euphonic_args = [str(filename)]
 
-    if weighting is not None:
-        euphonic_args.extend(["--weighting", str(weighting)])
     if grid is not None:
         euphonic_args.extend(["--grid", *[str(item) for item in grid]])
     if grid_spacing != 0.1:
         euphonic_args.extend(["--grid-spacing", str(grid_spacing)])
     if length_unit != "angstrom":
         euphonic_args.extend(["--length-unit", length_unit])
-    if save_to != "matplot_fig.png":
-        euphonic_args.extend(["--save-to", save_to])
-    if pdos:
-        euphonic_args.append("--pdos")
-    if adaptive:
-        euphonic_args.append("--adaptive")
+
 
     return {
         "filename": filename,
         "output_filename": out,
-        "save_to": save_to,
-        "weighting": weighting,
         "grid": grid,
         "grid_spacing": grid_spacing,
         "length_unit": length_unit,
-        "pdos": pdos,
-        "adaptive": adaptive,
         "euphonic_args": euphonic_args,
     }
     

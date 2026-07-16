@@ -74,7 +74,7 @@ class ModesParser(BaseParser):
                 mode_grads_output, mode="rb"
             )
         except FileNotFoundError:
-            self.logger.error("exception in getting mode gradient filepath")
+            #self.logger.error("exception in getting mode gradient filepath")
             return self.exit_codes.ERROR_MISSING_OUTPUT
 
         mode_grads_path.write_bytes(filedata)
