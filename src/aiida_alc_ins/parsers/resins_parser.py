@@ -15,24 +15,24 @@ from euphonic import Spectrum1DCollection
 
 from aiida_alc_ins.parsers.base_parser import BaseParser
 
-ToscaCalc = CalculationFactory("abinslib.tosca")
+ResinsCalc = CalculationFactory("abinslib.resins")
     
 
-class ToscaParser(BaseParser):
+class ResinsParser(BaseParser):
     """Parse outputs from the AiiDA phonon modes calculation wrapper.
 
     Parameters
     ----------
     node : ProcessNode
-        The AiiDA process node produced by a ``euphonic.tosca`` calcjob.
+        The AiiDA process node produced by a ``euphonic.resins`` calcjob.
     """
 
     def __init__(self, node: ProcessNode):
-        """Check that the passed node is produced by a ``ToscaCalc``."""
+        """Check that the passed node is produced by a `ResinsCalc``."""
         super().__init__(node)
 
-        if not issubclass(node.process_class, ToscaCalc):
-            raise exceptions.ParsingError("Can only parse `ToscaCalc` calculations")
+        if not issubclass(node.process_class, ResinsCalc):
+            raise exceptions.ParsingError("Can only parse `ResinsCalc` calculations")
 
     def parse(self, **kwargs) -> int:
         """Parse the retrieved mode output files and publish the parsed results."""
@@ -42,9 +42,11 @@ class ToscaParser(BaseParser):
 
         spectra_output = self.node.inputs.out.value
 
+        print(f"*************spectra_output: {spectra_output}*************")
+
         files_retrieved = self.retrieved.list_object_names()
         files_expected = {spectra_output}
-        if not files_expected.issubset(files_retrieved):
+        if not files_expected.issubset(files_retrieved):    
             self.logger.error(
                 f"Found files '{files_retrieved}', expected to find '{files_expected}'"
             )
