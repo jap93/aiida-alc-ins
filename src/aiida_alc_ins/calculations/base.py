@@ -80,7 +80,7 @@ class BaseINS(CalcJob):  # numpydoc ignore=PR01
     """
 
     DEFAULT_OUTPUT_FILE = "aiida-stdout.txt"
-    DEFAULT_INPUT_FILE = "phonopy_data.yaml"
+    
     DEFAULT_LOG_FILE = "aiida.log"
     DEFAULT_SUMMARY_FILE = "aiida-summary.yml"
 
@@ -164,15 +164,15 @@ class BaseINS(CalcJob):  # numpydoc ignore=PR01
             An instance of `aiida.common.datastructures.CalcInfo`.
         """
         
-        # Transform the structure data in xyz file called input_filename
-        input_filename = self.inputs.metadata.options.input_filename
-        phonopy_data = {}
-        import yaml
-        with open(input_filename, 'r') as file:
-            phonopy_data = yaml.safe_load(file)
+        # Copy the input file to the folder
+        #input_filename = self.inputs.metadata.options.input_filename
+        #phonopy_data = {}
+        #import yaml
+        #with open(input_filename, 'r') as file:
+        #    phonopy_data = yaml.safe_load(file)
         
-        with folder.open(input_filename, mode="w") as file:
-            yaml.dump(phonopy_data, file)
+        #with folder.open(input_filename, mode="w") as file:
+        #    yaml.dump(phonopy_data, file)
 
         log_filename = self.inputs.log_filename.value
         summary = self.inputs.summary.value

@@ -11,17 +11,18 @@ from typing import Any
 import click
 import numpy as np
 
-from euphonic import QpointPhononModes, Quantity
-
+from euphonic import Quantity, QpointPhononModes
+from abinslib.displacements import Displacements
+from abinslib.almost_isotropic_incoherent import (
+            calculate_almost_isotropic_incoherent_spectra,
+            mantid_like_combination_spectra,
+        )
+from abinslib.displacements import Displacements
+from abinslib.util import calculate_indirect_q2
 
 @click.command(name="aiida-alc-ins-tosca")
-@click.option(
-    "--modes-filename",
-    "modes_filename",
-    type=click.Path(exists=True, dir_okay=False),
-    required=True,
-    help="Path to the CASTEP phonon-modes input file.",
-)
+@click.argument("modes_filename", type=click.Path(exists=True, dir_okay=False))
+
 @click.option(
     "--temperature",
     type=float,
@@ -81,24 +82,13 @@ def collect_tosca_cli_options(args: dict[str, Any] | Any) -> dict[str, Any]:
 
 def run_tosca_calculation(args: dict[str, Any]) -> None:
     """Run a ToSCA calculation from CLI arguments."""
-    try:
-        from abinslib.almost_isotropic_incoherent import (
-            calculate_almost_isotropic_incoherent_spectra,
-            mantid_like_combination_spectra,
-        )
-        from abinslib.displacements import Displacements
-        from abinslib.util import calculate_indirect_q2
-    except ModuleNotFoundError as exc:
-        raise ModuleNotFoundError(
-            "The ToSCA CLI requires the optional abinslib dependency to be installed."
-        ) from exc
+    
 
     modes_filename = args.get("modes_filename")
     if modes_filename is None:
         raise ValueError("The CLI config must include a modes filename.")
 
-    with open(modes_filename, 'r') as f:
-        modes = json.load(f)
+    modes = QpointPhononModes.from_json_file(modes_filename)
 
     temperature = Quantity(float(args.get("temperature", 50.0)), "kelvin")
     
@@ -111,12 +101,21 @@ def run_tosca_calculation(args: dict[str, Any]) -> None:
         final_energy=Quantity(32.0, "cm^-1").to("hartree"),
     )
 
+    bins = Quantity(np.linspace(0, 2000, 201), "cm^-1")
+    bin_centres = (bins[1:] + bins[:-1]) * 0.5
+    
+    binned_q2 = calculate_indirect_q2(
+        bin_centres,
+        angle=(135 * np.pi / 180),
+        final_energy=Quantity(32.0, "cm^-1").to("hartree"),
+    )
+
     fundamentals = calculate_almost_isotropic_incoherent_spectra(
         modes=modes,
         mode_displacements=mode_displacements,
         atomic_displacements=atomic_displacements,
         nominal_q2=tosca_backward_q2,
-        bins=np.linspace(0.0, 1.0, 10),
+        bins=bins,
         apply_cross_section=True,
     )
 
@@ -124,16 +123,14 @@ def run_tosca_calculation(args: dict[str, Any]) -> None:
         modes,
         mode_displacements,
         atomic_displacements,
-        np.linspace(0.0, 1.0, 10),
-        np.linspace(0.0, 1.0, 10),
+        binned_q2,
+        bins,
         apply_cross_section=True,
     )
 
     spectra = fundamentals + second_order
-    output_file = args.get("output_filename", "tosca-spectra.json")
-    with open(output_file, "w", encoding="utf-8") as handle:
-        json.dump({"spectra": str(spectra)}, handle, indent=4)
 
+    spectra.to_json_file(args.get("output_filename", "tosca-spectra.json"))
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse CLI options and forward them to the ToSCA entry point."""

@@ -35,6 +35,7 @@ source = "https://github.com/stfc/aiida-alc-ins"
 [project.scripts]
 aiida-alc-ins-modes = "aiida_alc_ins.cli.modes:main"
 aiida-alc-ins-tosca = "aiida_alc_ins.cli.tosca:main"
+aiida-alc-ins-displacement = "aiida_alc_ins.cli.displacement_cli:main"
 
 [dependency-groups]
 dev = [
@@ -73,10 +74,14 @@ build-backend = "uv_build"
 [project.entry-points."aiida.calculations"]
 "euphonic.dos" = "aiida_alc_ins.calculations.euphonic:DOS"
 "euphonic.modes" = "aiida_alc_ins.calculations.phonon_modes:Modes"
+"abinslib.tosca" = "aiida_alc_ins.calculations.tosca_spectrum:Tosca"
+"abinslib.displacements" = "aiida_alc_ins.calculations.displacement:Displacements"
 
 [project.entry-points."aiida.parsers"]
 "euphonic.euphonic_parser" = "aiida_alc_ins.parsers.euphonic_parser:EuphonicParser"
 "euphonic.modes_parser" = "aiida_alc_ins.parsers.modes_parser:ModesParser"
+"abinslib.tosca_parser" = "aiida_alc_ins.parsers.tosca_parser:ToscaParser"
+"abinslib.displacement_parser" = "aiida_alc_ins.parsers.displacement_parser:DisplacementParser"
 
 
 [tool.pytest.ini_options]

@@ -1,7 +1,7 @@
 """AiiDA wrapper for Euphonic q-point phonon mode calculations."""
 
 from __future__ import annotations
-import yaml
+import json
 
 from aiida.common import datastructures
 import aiida.common.folders
@@ -12,7 +12,7 @@ from aiida.orm import Dict, Float, SinglefileData, Str
 from aiida_alc_ins.calculations.base import BaseINS
 
 
-class Modes(BaseINS):
+class Tosca(BaseINS):
     """CalcJob implementation for generating phonon modes from force constants.
 
     This wrapper mirrors the CLI workflow exposed by
@@ -20,10 +20,9 @@ class Modes(BaseINS):
     gradients as retrievable AiiDA outputs.
     """
 
-    DEFAULT_INPUT_FILE = "phonopy_data.yaml"
-    PHONON_OUTPUT = "aiida-modes.json"
+    DEFAULT_INPUT_FILE = "phonon_modes.json"
+    TOSCA_OUTPUT = "tosca-spectra.json"
     DEFAULT_SUMMARY_FILE = "phonon-summary.yml"
-    DEFAULT_MODE_GRADS_FILE = "aiida-mode_grads.json"
 
 
     @classmethod
@@ -32,41 +31,27 @@ class Modes(BaseINS):
         super().define(spec)
 
         spec.input(
-            "input_source",
+            "modes_filename",
             valid_type=Str,
             required=True,
-            default=lambda: Str("phonopy_data.yaml"),
+            default=lambda: Str("phonon_modes.json"),
             help="The phonopy summary file to use as the calculation input.",
         )
         spec.input(
             "out",
             valid_type=Str,
             required=False,
-            default=lambda: Str(cls.PHONON_OUTPUT),
-            help="Name of the generated phonon modes output file.",
+            default=lambda: Str(cls.TOSCA_OUTPUT),
+            help="Name of the generated ToSCA spectra output file.",
         )        
         spec.input(
-            "grid",
-            valid_type=Str,
-            required=False,
-            help="Monkhorst-Pack grid as a string of three integers, e.g. '5 5 5'.",
-        )
-        spec.input(
-            "grid_spacing",
+            "temperature",
             valid_type=Float,
             required=False,
-            default=Float(0.1),
-            help="Q-point spacing used for Monkhorst-Pack sampling.",
+            default=lambda: Float(50.0),
+            help="Simulation temperature in kelvin.",
         )
-        spec.input(
-            "length_unit",
-            valid_type=Str,
-            required=False,
-            default=lambda: Str("angstrom"),
-            help="Length unit used by the underlying calculation.",
-        )
-
-        spec.inputs["metadata"]["options"]["parser_name"].default = "euphonic.modes_parser"
+        spec.inputs["metadata"]["options"]["parser_name"].default = "abinslib.tosca_parser"
 
 
         spec.output(
@@ -74,8 +59,7 @@ class Modes(BaseINS):
             valid_type=Dict,
             help="The parsed results dictionary produced by the calculation.",
         )
-        spec.output("phonon_output", valid_type=SinglefileData)
-        spec.output("mode_grads", valid_type=SinglefileData)
+        spec.output("tosca_output", valid_type=SinglefileData)
 
         spec.default_output_node = "results_dict"
 
@@ -87,31 +71,24 @@ class Modes(BaseINS):
         codeinfo = calcinfo.codes_info[0]
 
         output_filename = self.inputs.out.value
-        mode_grads_output = self.DEFAULT_MODE_GRADS_FILE
 
-        cmdline_params = [self.inputs.input_source.value]
+        cmdline_params = [self.inputs.modes_filename.value]
 
-        if self.inputs.grid:
-            cmdline_params.extend(["--grid", *self.inputs.grid.value.split()])
-
-        if self.inputs.grid_spacing.value != 0.1:
-            cmdline_params.extend(["--grid-spacing", str(self.inputs.grid_spacing.value)])
-
-        if self.inputs.length_unit.value != "angstrom":
-            cmdline_params.extend(["--length-unit", self.inputs.length_unit.value])
+        if self.inputs.temperature.value != 50.0:
+            cmdline_params.extend(["--temperature", str(self.inputs.temperature.value)])
 
         cmdline_params.extend(["--out", output_filename])
         codeinfo.cmdline_params = cmdline_params
 
-        calcinfo.retrieve_list.extend([output_filename, mode_grads_output])
+        calcinfo.retrieve_list.extend([output_filename])
 
         input_filename = self.inputs.metadata.options.input_filename
-        phonopy_data = {}
+        mode_data = {}
         
         with open(input_filename, 'r') as file:
-            phonopy_data = yaml.safe_load(file)
+            mode_data = json.load(file)
         
-        with folder.open(input_filename, mode="w") as file:
-            yaml.dump(phonopy_data, file)
+        with folder.open(input_filename, mode="w", encoding="utf-8") as file:
+            json.dump(mode_data, file, indent=4)
 
         return calcinfo

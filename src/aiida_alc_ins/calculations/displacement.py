@@ -1,7 +1,6 @@
 """AiiDA wrapper for Euphonic q-point phonon mode calculations."""
 
 from __future__ import annotations
-import yaml
 
 from aiida.common import datastructures
 import aiida.common.folders
@@ -10,9 +9,9 @@ import aiida.engine.processes
 from aiida.orm import Dict, Float, SinglefileData, Str
 
 from aiida_alc_ins.calculations.base import BaseINS
+import json
 
-
-class Modes(BaseINS):
+class Displacements(BaseINS):
     """CalcJob implementation for generating phonon modes from force constants.
 
     This wrapper mirrors the CLI workflow exposed by
@@ -20,11 +19,9 @@ class Modes(BaseINS):
     gradients as retrievable AiiDA outputs.
     """
 
-    DEFAULT_INPUT_FILE = "phonopy_data.yaml"
-    PHONON_OUTPUT = "aiida-modes.json"
-    DEFAULT_SUMMARY_FILE = "phonon-summary.yml"
-    DEFAULT_MODE_GRADS_FILE = "aiida-mode_grads.json"
-
+    DEFAULT_INPUT_FILE = "phonon_modes.json"
+    MODE_DISPLACEMENTS_OUTPUT = "aiida-mode-displacements.json"
+    ATOMIC_DISPLACEMENTS_OUTPUT = "aiida-atomic-displacements.json"
 
     @classmethod
     def define(cls, spec: CalcJobProcessSpec) -> None:
@@ -35,38 +32,33 @@ class Modes(BaseINS):
             "input_source",
             valid_type=Str,
             required=True,
-            default=lambda: Str("phonopy_data.yaml"),
-            help="The phonopy summary file to use as the calculation input.",
+            default=lambda: Str("phonon_modes.json"),
+            help="The phonon modes file to use as the calculation input.",
         )
         spec.input(
-            "out",
+            "out_mode_displacements",
             valid_type=Str,
             required=False,
-            default=lambda: Str(cls.PHONON_OUTPUT),
-            help="Name of the generated phonon modes output file.",
-        )        
-        spec.input(
-            "grid",
-            valid_type=Str,
-            required=False,
-            help="Monkhorst-Pack grid as a string of three integers, e.g. '5 5 5'.",
+            default=lambda: Str(cls.MODE_DISPLACEMENTS_OUTPUT),
+            help="Name of the generated mode displacements output file.",
         )
         spec.input(
-            "grid_spacing",
-            valid_type=Float,
-            required=False,
-            default=Float(0.1),
-            help="Q-point spacing used for Monkhorst-Pack sampling.",
-        )
-        spec.input(
-            "length_unit",
+            "out_atomic_displacements",
             valid_type=Str,
             required=False,
-            default=lambda: Str("angstrom"),
-            help="Length unit used by the underlying calculation.",
+            default=lambda: Str(cls.ATOMIC_DISPLACEMENTS_OUTPUT),
+            help="Name of the generated atomic displacements output file.",
         )
 
-        spec.inputs["metadata"]["options"]["parser_name"].default = "euphonic.modes_parser"
+        spec.input(
+            "temperature",
+            valid_type=Float,
+            required=False,
+            default=Float(50.0),
+            help="Temperature for the phonon calculations.",
+        )
+
+        spec.inputs["metadata"]["options"]["parser_name"].default = "abinslib.displacement_parser"
 
 
         spec.output(
@@ -74,8 +66,8 @@ class Modes(BaseINS):
             valid_type=Dict,
             help="The parsed results dictionary produced by the calculation.",
         )
-        spec.output("phonon_output", valid_type=SinglefileData)
-        spec.output("mode_grads", valid_type=SinglefileData)
+        spec.output("mode_displacements_output", valid_type=SinglefileData)
+        spec.output("atomic_displacements_output", valid_type=SinglefileData)
 
         spec.default_output_node = "results_dict"
 
@@ -86,32 +78,27 @@ class Modes(BaseINS):
         calcinfo = super().prepare_for_submission(folder)
         codeinfo = calcinfo.codes_info[0]
 
-        output_filename = self.inputs.out.value
-        mode_grads_output = self.DEFAULT_MODE_GRADS_FILE
+        mode_output_filename = self.inputs.out_mode_displacements.value
+        atomic_output_filename = self.inputs.out_atomic_displacements.value    
 
         cmdline_params = [self.inputs.input_source.value]
 
-        if self.inputs.grid:
-            cmdline_params.extend(["--grid", *self.inputs.grid.value.split()])
+        if self.inputs.temperature.value != 50.0:
+            cmdline_params.extend(["--temperature", str(self.inputs.temperature.value)])    
 
-        if self.inputs.grid_spacing.value != 0.1:
-            cmdline_params.extend(["--grid-spacing", str(self.inputs.grid_spacing.value)])
-
-        if self.inputs.length_unit.value != "angstrom":
-            cmdline_params.extend(["--length-unit", self.inputs.length_unit.value])
-
-        cmdline_params.extend(["--out", output_filename])
+        cmdline_params.extend(["--out_mode_displacements", mode_output_filename])
+        cmdline_params.extend(["--out_atomic_displacements", atomic_output_filename])
         codeinfo.cmdline_params = cmdline_params
 
-        calcinfo.retrieve_list.extend([output_filename, mode_grads_output])
+        calcinfo.retrieve_list.extend([mode_output_filename, atomic_output_filename])
 
         input_filename = self.inputs.metadata.options.input_filename
-        phonopy_data = {}
+        mode_data = {}
         
         with open(input_filename, 'r') as file:
-            phonopy_data = yaml.safe_load(file)
+            mode_data = json.load(file)
         
         with folder.open(input_filename, mode="w") as file:
-            yaml.dump(phonopy_data, file)
+            json.dump(mode_data, file)
 
         return calcinfo
