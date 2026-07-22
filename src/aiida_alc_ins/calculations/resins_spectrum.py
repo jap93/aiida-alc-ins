@@ -1,13 +1,17 @@
-"""AiiDA wrapper for Euphonic q-point phonon mode calculations."""
+"""AiiDA wrapper for RESINS calculations."""
 
 from __future__ import annotations
 import json
+import pathlib
+from pathlib import Path
 
 from aiida.common import datastructures
 import aiida.common.folders
 from aiida.engine import CalcJobProcessSpec
 import aiida.engine.processes
 from aiida.orm import Dict, Float, SinglefileData, Str
+
+from euphonic import Spectrum1DCollection
 
 from aiida_alc_ins.calculations.base import BaseINS
 
@@ -83,12 +87,14 @@ class Resins(BaseINS):
         calcinfo.retrieve_list.extend([output_filename])
 
         input_filename = self.inputs.metadata.options.input_filename
-        mode_data = {}
         
-        with open(input_filename, 'r') as file:
-            mode_data = json.load(file)
+        mode_data = Spectrum1DCollection.from_json_file(input_filename)
+
+        output_path = Path(folder.get_abs_path(output_filename))
+
+        mode_data.to_json_file(output_path)
         
-        with folder.open(input_filename, mode="w", encoding="utf-8") as file:
-            json.dump(mode_data, file, indent=4)
+        #with folder.open(input_filename, mode="w", encoding="utf-8") as file:
+        #    json.dump(mode_data, file, indent=4)
 
         return calcinfo

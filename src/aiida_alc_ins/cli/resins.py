@@ -11,7 +11,8 @@ from typing import Any
 import click
 import numpy as np
 
-from euphonic import Quantity, QpointPhononModes
+from euphonic import Quantity, QpointPhononModes, Spectrum1DCollection
+from resins import Instrument
 from abinslib.displacements import Displacements
 from abinslib.almost_isotropic_incoherent import (
             calculate_almost_isotropic_incoherent_spectra,
@@ -88,12 +89,11 @@ def run_resins_calculation(args: dict[str, Any]) -> None:
     if input_source is None:
         raise ValueError("The CLI config must include a modes filename.")
 
-    modes = QpointPhononModes.from_json_file(input_source)
-    
-    mode_displacements = Displacements.from_modes(modes, temperature=temperature)
-    atomic_displacements = mode_displacements.to_atomic_displacements()
+    #with open(input_source, "r") as f:
+    #    spectra = json.load(f)
+    spectra = Spectrum1DCollection.from_json_file(input_source)
 
-    tosca = Instrument.from_default("TOSCA")
+    tosca = Instrument.from_default(args.get("instrument", "TOSCA"))
     res = tosca.get_resolution_function("AbINS_v1")
 
     x = spectra.get_bin_centres().to("meV").magnitude
@@ -101,18 +101,14 @@ def run_resins_calculation(args: dict[str, Any]) -> None:
     y = spectrum.y_data.magnitude
 
     y_broadened = res.broaden(
-    # broaden() requires a Nx1 array of input points, so we broadcast a new
-    # axis with None; in theory these could be 2D (|Q|,ω) or 4D (q,ω).
-    points=x[:, None],
-    data=y,
-    # In this case the output mesh is the same as the input x-values
-    mesh=x,
+        # broaden() requires a Nx1 array of input points, so we broadcast a new
+        # axis with None; in theory these could be 2D (|Q|,ω) or 4D (q,ω).
+        points=x[:, None],
+        data=y,
+        # In this case the output mesh is the same as the input x-values
+        mesh=x,
     )
     spectrum.y_data = Quantity(y_broadened, spectrum.y_data.units)
-
-#fig = plot_1d(spectrum)
-#set_labels(fig.axes[0], spectrum)
-#plt.show()
 
     spectrum.to_json_file(args.get("output_filename"))
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 import json
+import pathlib
+from pathlib import Path
 
 from aiida.common import datastructures
 import aiida.common.folders

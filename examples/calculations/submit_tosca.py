@@ -1,6 +1,8 @@
 """Example code for submitting Euphonic phonon modes calculations."""
 
 from __future__ import annotations
+import pathlib
+from pathlib import Path
 
 from typing import Any
 
@@ -8,6 +10,7 @@ from aiida.common import NotExistent
 from aiida.engine import run_get_node
 from aiida.orm import Float, Str, load_code
 from aiida.plugins import CalculationFactory
+from euphonic import Spectrum1DCollection
 import click
 import json
 
@@ -38,14 +41,18 @@ def tosca_experiment(params: dict[str, Any]) -> None:
     print("Results dictionary:")
     print(result.keys())
 
-    print(result["results_dict"].get_dict())
+    #only uncomment below if you want lots of information printed to the screen
+    #print(result["results_dict"].get_dict())
 
-    with open("tosca-spectrum.json", "w") as f:
-        json.dump(result["results_dict"].get_dict(), f, indent=4)
-        
     print(f"remote folder {result['remote_folder']} {node.get_remote_workdir()} ")
     print(f"retrieved {result['retrieved']}  ")
 
+    remote_folder = result["remote_folder"]
+    spectra_path = Path(remote_folder.get_remote_path()) / params["out"]
+    spectra = Spectrum1DCollection.from_json_file(spectra_path)
+
+    spectra.to_json_file(params["out"])
+    
 
 @click.command("cli")
 @click.argument("codelabel", type=str)

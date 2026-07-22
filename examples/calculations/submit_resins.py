@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from typing import Any
+import pathlib
+from pathlib import Path
 
 from aiida.common import NotExistent
 from aiida.engine import run_get_node
 from aiida.orm import Float, Str, load_code
 from aiida.plugins import CalculationFactory
+from euphonic import Spectrum1DCollection
 import click
 import json
 
@@ -38,10 +41,14 @@ def resins_experiment(params: dict[str, Any]) -> None:
     print("Results dictionary:")
     print(result.keys())
 
-    print(result["results_dict"].get_dict())
+    #only uncomment if you want lots of data printed to the screen
+    #print(result["results_dict"].get_dict())
 
-    with open("resins-spectrum.json", "w") as f:
-        json.dump(result["results_dict"].get_dict(), f, indent=4)
+    remote_folder = result["remote_folder"]
+    spectra_path = Path(remote_folder.get_remote_path()) / params["out"]
+    spectra = Spectrum1DCollection.from_json_file(spectra_path)
+
+    spectra.to_json_file(params["out"])
         
     print(f"remote folder {result['remote_folder']} {node.get_remote_workdir()} ")
     print(f"retrieved {result['retrieved']}  ")
